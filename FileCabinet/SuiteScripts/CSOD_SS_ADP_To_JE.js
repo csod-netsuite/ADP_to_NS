@@ -1,10 +1,8 @@
 
-define(['N/file', 'N/render'], function (file, render) {
+define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
 
     /**
      * Module Description...
-     *
-     * @exports XXX
      *
      * @copyright 2017 Cornerstone OnDemand
      * @author Chan Yi  cyi@csod.com
@@ -46,7 +44,85 @@ define(['N/file', 'N/render'], function (file, render) {
 
         var objectifiedData = getDataObject(csvFile);
 
+        var paycodeAccountObj = getPaycodeToAccountTable();
+
+        var dataWithAccount = fillAccountId(objectifiedData, paycodeAccountObj);
+
+        // get unique Debit and Credit Account
+        var accountNumbers = getUniqueAccountNumber(objectifiedData);
+
+        if(logEnable) {
+            log.debug({
+                title: 'dataWithAccount',
+                details: dataWithAccount
+            });
+        }
     }
+
+    /**
+     * Find account ids and set the account id to data object
+     * @param data {array}
+     * @param paycodeObj {array}
+     * @returns {array} data
+     */
+    var fillAccountId = function(data, paycodeObj) {
+
+        for (var i = 0; i < data.length; i++) {
+
+            var matchingObj = paycodeObj.filter(function(obj) {
+                return data[i].paycode == obj.paycode;
+            });
+
+            if(matchingObj.length > 0) {
+                data[i].debit_account = matchingObj[0].debitId;
+                data[i].credit_account = matchingObj[0].creditId;
+            }
+        }
+        return data;
+    };
+
+    /**
+     * Search customrecord_csod_adp_paycode_table and build list of data in object
+     * return {array}
+     */
+    var getPaycodeToAccountTable = function() {
+
+        var outList = [];
+
+        var customrecord_csod_adp_paycode_tableSearchObj = search.create({
+            type: "customrecord_csod_adp_paycode_table",
+            filters:[],
+        columns: [
+            "custrecord_csod_adp_paycode",
+            "custrecord_csod_adp_cr_gl_account",
+            "custrecord_csod_adp_dr_gl_account"
+        ]
+    });
+        var searchResultCount = customrecord_csod_adp_paycode_tableSearchObj.runPaged().count;
+        if(searchResultCount > 0) {
+            customrecord_csod_adp_paycode_tableSearchObj.run().each(function(result){
+                var tempObj = {
+                    paycode: '',
+                    debitId: '',
+                    creditId: ''
+                };
+                // .run().each has a limit of 4,000 results
+                tempObj.paycode = result.getValue({name: 'custrecord_csod_adp_paycode'});
+                tempObj.debitId = result.getValue({name: 'custrecord_csod_adp_dr_gl_account'});
+                tempObj.creditId = result.getValue({name: 'custrecord_csod_adp_cr_gl_account'});
+
+                outList.push(tempObj);
+
+                return true;
+            });
+        }
+
+        return outList;
+    };
+
+    var getUniqueAccountNumber = function(data) {
+
+    };
 
     /**
      * Iterate CSV file lines and collect information
@@ -103,14 +179,15 @@ define(['N/file', 'N/render'], function (file, render) {
                 tempObj.amount = parseFloat(arr[6]);
             }
 
-            if(logEnable) {
+            if(!logEnable) {
                 log.debug({
                     title: "tempObj",
                     details: tempObj
                 });
             }
-
-            output.push(tempObj);
+            if(tempObj.paycode) {
+                output.push(tempObj);
+            }
 
             return true;
         });
