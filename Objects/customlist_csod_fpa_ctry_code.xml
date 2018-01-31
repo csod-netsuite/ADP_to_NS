@@ -1,0 +1,16 @@
+<customlist scriptid="customlist_csod_fpa_ctry_code">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>CSOD ADP Country Code</name>
+  <customvalues>
+    <customvalue scriptid="val_10116540_642845_sb2_446">
+      <isinactive>F</isinactive>
+      <value>FR</value>
+    </customvalue>
+    <customvalue scriptid="val_10116541_642845_sb2_430">
+      <isinactive>F</isinactive>
+      <value>IL</value>
+    </customvalue>
+  </customvalues>
+</customlist>

@@ -1,5 +1,6 @@
 
-define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
+define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSOD_Lib_Ref'],
+    function (file, record, render, search, _, Lib) {
 
     /**
      * Module Description...
@@ -10,6 +11,18 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
      * @NApiVersion 2.x
      * @NModuleScope Public
      * @NScriptType ScheduledScript
+     */
+
+    /**
+     * Create Object like this for every line (SVE)
+     * {
+         *
+         *      department: '1234',
+         *      paycode: 220,
+         *      debit_account: 61160,
+         *      credit_account: 22950,
+         *      amount: 3028.08
+         * }
      */
 
     var exports = {};
@@ -34,12 +47,24 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
     // Settings for the script
     const logEnable = true;
 
+    // Credit Department
+    const creditDepartment = '12';
+
+    // Accrued ESPP Withholdings ID (negative debit)
+    const ACC_ESPP_WITHHOLDING = '1604';
+
+    // global value initialization
+    var location = '';
+    var subsidiary = '';
+    var currency = '';
+
+
     // Entry Point
     function execute(context) {
 
         // TODO open and read Excel File
         var csvFile = file.load({
-            id: 2488600
+            id: 2796157
         });
 
         var objectifiedData = getDataObject(csvFile);
@@ -48,16 +73,255 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
 
         var dataWithAccount = fillAccountId(objectifiedData, paycodeAccountObj);
 
-        // get unique Debit and Credit Account
-        var accountNumbers = getUniqueAccountNumber(objectifiedData);
+        // Get Employee Data with Department
+        var dataWithDepartment = fillDepartmentId(dataWithAccount);
 
-        if(logEnable) {
+        // get unique Debit and Credit Account
+        var debitAccounts = getUniqueDebitNumbers(dataWithDepartment);
+        log.debug({
+            title: 'Unique Debits',
+            details: debitAccounts
+        });
+        var creditAccounts = getUniqueCreditNumbers(dataWithDepartment);
+        log.debug({
+            title: 'Unique Credits',
+            details: creditAccounts
+        });
+
+        // get unique Department
+        var departments = getUniqueDepartments(dataWithDepartment);
+        log.debug({
+            title: 'Unique Departments',
+            details: departments
+        });
+
+        if(!logEnable) {
             log.debug({
                 title: 'dataWithAccount',
                 details: dataWithAccount
             });
         }
+
+        createJournalEntry(dataWithDepartment, debitAccounts, creditAccounts, departments);
     }
+
+    var createJournalEntry = function(data, debitAccts, creditAccts, depts) {
+
+        // Get Header Level Obj
+        var jeObj = new Lib.JE_HeaderFields(subsidiary, currency);
+
+
+        // Write Debit Line
+        for(var x = 0; x < depts.length; x++) {
+            // if department is not empty string
+            var dept = depts[x];
+            if(dept !== '') {
+
+                // for every debit accounts
+                for(var y = 0; y < debitAccts.length; y++) {
+
+                    var debitAcct = debitAccts[y];
+
+                    // if debit account is not empty string
+                    if(debitAcct !== '') {
+                        // create entry line
+                        var debitLineObj = {
+                            account: debitAcct,
+                            debit: 0,
+                            credit:0,
+                            department: dept,
+                            location: ''
+                        };
+
+                        // go through each data
+                        for(var z = 0; z < data.length; z++) {
+
+                            var obj = data[z];
+                            if(obj.department === dept && obj.debit_account === debitAcct) {
+                                debitLineObj.debit += parseFloat(obj.amount);
+                            }
+                        }
+                        if(debitLineObj.debit > 0) {
+                            jeObj.lines.push(debitLineObj);
+                        }
+                    }
+
+                }
+            }
+        } // End of Department Loop
+
+        // collect credit lines
+        for(var cr = 0; cr < creditAccts.length; cr++) {
+            var credit = creditAccts[cr];
+            var creditLineObj = {
+                account: credit,
+                debit: 0,
+                credit:0,
+                department: creditDepartment,
+                location: ''
+            };
+            if(credit) {
+                data.forEach(function(o) {
+
+                    if(o.hasOwnProperty('credit_account')){
+                        if(credit === ACC_ESPP_WITHHOLDING && o.debit_account === credit) {
+                            // if account is 21395
+                            // collect credit amount from debit_amount
+                            // 21395, 62120, 21380, 22950
+
+
+                            creditLineObj.credit += parseFloat(o.amount);
+
+                            log.debug({
+                                title: "credit is ACC_ESPP_WITHHOLDING",
+                                details: creditLineObj
+                            })
+
+                        }
+
+                        // if(credit === '345' && o.debit_account === credit) {
+                        //     creditLineObj.credit += parseFloat(o.amount);
+                        // }
+
+                        // if(o.credit_account === credit && parseFloat(o.credit_account) > 0) {
+                        //     creditLineObj.credit += parseFloat(o.credit_account);
+                        // }
+                    }
+                });
+
+                // push to creditLineObj
+                if(creditLineObj.credit > 0) {
+                    jeObj.lines.push(creditLineObj);
+                } else if(creditLineObj.credit < 0) {
+                    // convert to positive
+                    creditLineObj.credit = -creditLineObj.credit;
+                    jeObj.lines.push(creditLineObj);
+                }
+            }
+        } // end of credit accounts loop
+
+        log.debug({
+            title: "entry credit lines check",
+            details: jeObj.lines.slice(jeObj.lines.length - 5, jeObj.lines.length)
+        });
+
+        var newJeId =  writeJournalEntry(jeObj);
+
+        log.debug({
+            title: 'new journal created',
+            details: 'id : ' + newJeId
+        });
+
+    };
+
+    var writeJournalEntry = function(jeObj) {
+
+        try {
+
+            log.debug({
+                title: 'JE Entry',
+                details: jeObj
+            });
+
+            var newJournal = record.create({
+                type: record.Type.JOURNAL_ENTRY,
+                isDynamic: true,
+                defaultValues: {
+                    customForm: jeObj.customForm
+                }
+            });
+            // Set Header Level Values
+            newJournal.setValue({
+                fieldId: 'subsidiary',
+                value: jeObj.subsidiary
+            });
+            newJournal.setValue({
+                fieldId: 'custbodycash_use_category',
+                value: jeObj.custbodycash_use_category
+            });
+            newJournal.setValue({
+                fieldId: 'currency',
+                value: jeObj.currency
+            });
+            newJournal.setValue({
+                fieldId: 'approved',
+                value: jeObj.approved
+            });
+
+            // Set Line Level Values
+            var lineLength = jeObj.lines.length;
+
+            if (lineLength > 0) {
+                for (var i = 0; i < lineLength; i++) {
+
+                    newJournal.selectNewLine({
+                        sublistId: 'line'
+                    });
+
+                    var lineObj = jeObj.lines[i];
+                    var debitAmount = lineObj.debit;
+                    var creditAmount = lineObj.credit;
+
+                    // set account
+                    newJournal.setCurrentSublistValue({
+                        sublistId: 'line',
+                        fieldId: 'account',
+                        value: lineObj.account
+                    });
+
+                    // set department
+                    newJournal.setCurrentSublistValue({
+                        sublistId: 'line',
+                        fieldId: 'department',
+                        value: lineObj.department
+                    });
+
+                    // set location
+                    newJournal.setCurrentSublistValue({
+                        sublistId: 'line',
+                        fieldId: 'location',
+                        value: lineObj.location
+                    });
+
+                    // set debit or credit
+
+                    if (debitAmount > 0) {
+                        newJournal.setCurrentSublistValue({
+                            sublistId: 'line',
+                            fieldId: 'debit',
+                            value: debitAmount.toFixed(2)
+                        });
+                    } else {
+                        newJournal.setCurrentSublistValue({
+                            sublistId: 'line',
+                            fieldId: 'credit',
+                            value: creditAmount.toFixed(2)
+                        });
+                    }
+
+                    newJournal.commitLine({
+                        sublistId: 'line'
+                    });
+
+                } // end loop
+            }
+
+            // submit new record
+
+            var newJournalId = newJournal.save({
+                ignoreMandatoryFields: true
+            });
+
+            return newJournalId;
+
+        } catch(e) {
+            log.error({
+                title: 'Error Has Occurred',
+                details: e
+            });
+        }
+
+    };
 
     /**
      * Find account ids and set the account id to data object
@@ -120,8 +384,112 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
         return outList;
     };
 
-    var getUniqueAccountNumber = function(data) {
+    var getUniqueDebitNumbers = function(data) {
+        var allDebitAccts = [];
+        data.forEach(function(o) {
+            allDebitAccts.push(o.debit_account);
+        });
 
+        return _.uniq(allDebitAccts);
+    };
+
+    var getUniqueCreditNumbers = function(data) {
+        var allCreditAccts = [];
+        data.forEach(function(o){
+            allCreditAccts.push(o.credit_account);
+        });
+
+        // Manually Adding Account 21395 (ACC_ESPP_WITHHOLDING)
+        allCreditAccts.push(ACC_ESPP_WITHHOLDING);
+
+        return _.uniq(allCreditAccts);
+    };
+
+    var getUniqueDepartments = function(data) {
+        var allDepts = [];
+        data.forEach(function(o){
+            allDepts.push(o.department);
+        });
+
+        return _.uniq(allDepts);
+    };
+
+    /**
+     * Find department for each data in collection
+     * @param data
+     * @returns {collection}data
+     */
+    var fillDepartmentId = function(data) {
+
+        // get all employee ID
+        var allEmployeeIds = [];
+        data.forEach(function(obj) {
+            allEmployeeIds.push(obj.employee_id);
+        });
+
+        var uniqueEmployeeIds = _.uniq(allEmployeeIds);
+
+        log.debug({
+            title: 'Unique Employee IDs',
+            details: uniqueEmployeeIds
+        });
+
+        // search Department Data and build Employee to Department Reference Table
+
+        var employeeToDepartmentReferences = [];
+
+        var employeeSearchObj = search.create({
+            type: "employee",
+            filters: [
+                ["externalid","anyof",uniqueEmployeeIds]
+            ],
+            columns: [
+                "externalid",
+                "department"
+            ]
+        });
+
+        var searchResultCount = employeeSearchObj.runPaged().count;
+        if(searchResultCount > 0) {
+            employeeSearchObj.run().each(function(result){
+                // .run().each has a limit of 4,000 results
+                var employeeToDepartmentReference = {
+                    employee_id : '',
+                    department_id : ''
+                };
+
+                employeeToDepartmentReference.employee_id = result.getValue({name: 'externalid'});
+                employeeToDepartmentReference.department_id = result.getValue({name: 'department'});
+                employeeToDepartmentReferences.push(employeeToDepartmentReference);
+                return true;
+            });
+        }
+
+
+        if(logEnable) {
+            log.debug({
+                title: 'Employee to Department Lookups',
+                details: employeeToDepartmentReferences
+            });
+        }
+
+        data.forEach(function(obj) {
+
+            var foundRef = _.find(employeeToDepartmentReferences, {'employee_id': obj.employee_id});
+
+            if(foundRef) {
+                obj.department = foundRef.department_id;
+            }
+        });
+
+        if(logEnable) {
+            log.debug({
+                title: 'Data with Department',
+                details: data
+            });
+        }
+
+        return data;
     };
 
     /**
@@ -131,16 +499,6 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
      */
     var getDataObject = function(csvFile) {
 
-        /**
-         * TODO Create Object like this for every line (SVE)
-         * {
-         *      department: '1234',
-         *      paycode: 220,
-         *      debit_account: 61160,
-         *      credit_account: 22950,
-         *      amount: 3028.08
-         * }
-         */
         var output = [];
 
         var iterator = csvFile.lines.iterator();
@@ -149,6 +507,7 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
         iterator.each(function(line) {
 
             var tempObj = {
+                employee_id: null,
                 department: "",
                 paycode: "",
                 debit_account: "",
@@ -158,14 +517,13 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
 
             var arr = line.value.split(',');
 
-            log.debug({
-                title: "Employee ID",
-                details: arr[0]
-            });
-
             // get contrycode
             if(arr[0].toLowerCase() == 'country code') {
                 var countryCode = arr[1];
+                location = Lib.location[countryCode];
+                subsidiary = Lib.subsidiary[countryCode];
+                currency = Lib.currency[countryCode];
+
                 log.debug({
                     title: "Country Code",
                     details: countryCode
@@ -174,12 +532,17 @@ define(['N/file', 'N/render', 'N/search'], function (file, render, search) {
 
             // set tempObj values
             if(!isNaN(parseInt(arr[0])) && !isNaN(parseInt(arr[4]))) {
-
+                var employeeIdStr = arr[0];
+                // substring for employee id format
+                if(employeeIdStr.length == 8 && employeeIdStr.substring(0,2) == "00") {
+                    employeeIdStr = employeeIdStr.substring(2, employeeIdStr.length)
+                }
+                tempObj.employee_id = employeeIdStr;
                 tempObj.paycode = arr[4];
                 tempObj.amount = parseFloat(arr[6]);
             }
 
-            if(!logEnable) {
+            if(logEnable) {
                 log.debug({
                     title: "tempObj",
                     details: tempObj
