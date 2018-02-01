@@ -161,36 +161,44 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
                 location: ''
             };
             if(credit) {
+            	
+            	log.audit("Processing " + credit);
+            	
+            	
                 data.forEach(function(o) {
-
-                    if(o.hasOwnProperty('credit_account')){
-                        if(credit === ACC_ESPP_WITHHOLDING && o.debit_account === credit) {
-                            // if account is 21395
-                            // collect credit amount from debit_amount
-                            // 21395, 62120, 21380, 22950
-
-
-                            creditLineObj.credit += parseFloat(o.amount);
-
-                            log.debug({
-                                title: "credit is ACC_ESPP_WITHHOLDING",
-                                details: creditLineObj
-                            })
-
-                        }
-
-                        // if(credit === '345' && o.debit_account === credit) {
-                        //     creditLineObj.credit += parseFloat(o.amount);
-                        // }
-
-                        // if(o.credit_account === credit && parseFloat(o.credit_account) > 0) {
-                        //     creditLineObj.credit += parseFloat(o.credit_account);
-                        // }
-                    }
+                	// collect credit amount from debit_amount
+                    // 21395(1604), 62120(345), 21380(280), 22950(489)
+                	
+                	if(credit == ACC_ESPP_WITHHOLDING) {
+                		if(o.debit_account == ACC_ESPP_WITHHOLDING && parseFloat(o.amount) != 0) {
+                			creditLineObj.credit += parseFloat(o.amount);
+                		}
+                	} else if(credit == '345') {
+                		if(o.debit_account == '345' && parseFloat(o.amount) != 0) {
+                			creditLineObj.credit += parseFloat(o.amount);
+                		}
+                	} else {
+                    	
+                    	if(o.credit_account == credit && parseFloat(o.amount)) {
+                    		log.audit(credit + " processing now for " + o.amount);
+                    		creditLineObj.credit += parseFloat(o.amount);
+                    	}
+                    	if(o.debit_account == credit && parseFloat(o.amount)) {
+                    		log.audit(credit + " processing now for " + o.amount);
+                    		creditLineObj.credit -= parseFloat(o.amount);
+                    	}
+                	}   
+                    
                 });
+                
+                log.debug({
+            		title: 'pushing creditLineObj',
+            		details: creditLineObj
+            	});
 
                 // push to creditLineObj
-                if(creditLineObj.credit > 0) {
+                if(creditLineObj.credit >= 0) {
+                	
                     jeObj.lines.push(creditLineObj);
                 } else if(creditLineObj.credit < 0) {
                     // convert to positive
