@@ -64,7 +64,7 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
         // TODO open and read Excel File
         var csvFile = file.load({
-            id: 2796157
+            id: 2799072
         });
 
         var objectifiedData = getDataObject(csvFile);
@@ -108,22 +108,30 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
     var createJournalEntry = function(data, debitAccts, creditAccts, depts) {
 
         // Get Header Level Obj
-        var jeObj = new Lib.JE_HeaderFields(subsidiary, currency);
+        var jeObj = new Lib.JE_HeaderFields(subsidiary, currency, location);
 
 
         // Write Debit Line
         for(var x = 0; x < depts.length; x++) {
             // if department is not empty string
             var dept = depts[x];
-            if(dept !== '') {
 
+            //log.audit('Processing ' + dept);
+
+            if(dept) {
                 // for every debit accounts
                 for(var y = 0; y < debitAccts.length; y++) {
 
                     var debitAcct = debitAccts[y];
 
+                    // skip rest of process for debit side credit
+                    if(creditAccts.indexOf(debitAcct) > -1) {
+                        //log.audit('Skipping ' + debitAcct + ' for debit');
+                        continue;
+                    }
+
                     // if debit account is not empty string
-                    if(debitAcct !== '') {
+                    if(debitAcct) {
                         // create entry line
                         var debitLineObj = {
                             account: debitAcct,
@@ -137,11 +145,22 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
                         for(var z = 0; z < data.length; z++) {
 
                             var obj = data[z];
-                            if(obj.department === dept && obj.debit_account === debitAcct) {
-                                debitLineObj.debit += parseFloat(obj.amount);
+                            if(obj.department == dept && obj.debit_account == debitAcct) {
+
+                                if(parseFloat(obj.amount)) {
+                                    if(dept == '209') log.audit('adding ' + obj.amount  + ' for debit');
+                                    debitLineObj.debit += parseFloat(obj.amount);
+                                }
+
                             }
                         }
-                        if(debitLineObj.debit > 0) {
+                        if(debitLineObj.debit) {
+                            if(dept == '209') {
+                                log.audit({
+                                    title: "Pusing dept 209",
+                                    details: debitLineObj
+                                })
+                            }
                             jeObj.lines.push(debitLineObj);
                         }
                     }
@@ -162,7 +181,7 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
             };
             if(credit) {
             	
-            	log.audit("Processing " + credit);
+            	//log.audit("Processing " + credit);
             	
             	
                 data.forEach(function(o) {
@@ -174,17 +193,18 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
                 			creditLineObj.credit += parseFloat(o.amount);
                 		}
                 	} else if(credit == '345') {
+                	    // @TODO This is always double posting
                 		if(o.debit_account == '345' && parseFloat(o.amount) != 0) {
                 			creditLineObj.credit += parseFloat(o.amount);
                 		}
                 	} else {
                     	
                     	if(o.credit_account == credit && parseFloat(o.amount)) {
-                    		log.audit(credit + " processing now for " + o.amount);
+                    		//log.audit(credit + " processing now for " + o.amount);
                     		creditLineObj.credit += parseFloat(o.amount);
                     	}
                     	if(o.debit_account == credit && parseFloat(o.amount)) {
-                    		log.audit(credit + " processing now for " + o.amount);
+                    		//log.audit(credit + " processing now for " + o.amount);
                     		creditLineObj.credit -= parseFloat(o.amount);
                     	}
                 	}   
@@ -195,6 +215,11 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
             		title: 'pushing creditLineObj',
             		details: creditLineObj
             	});
+
+                // credit 62120 needs double posting
+                if(credit == '345') {
+                    jeObj.lines.push(creditLineObj);
+                }
 
                 // push to creditLineObj
                 if(creditLineObj.credit >= 0) {
@@ -258,6 +283,8 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
             // Set Line Level Values
             var lineLength = jeObj.lines.length;
+            var balanceCheckDebit = 0;
+            var balanceCheckCredit = 0;
 
             if (lineLength > 0) {
                 for (var i = 0; i < lineLength; i++) {
@@ -293,13 +320,19 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
                     // set debit or credit
 
-                    if (debitAmount > 0) {
+                    if (debitAmount) {
+
+                        balanceCheckDebit += debitAmount;
+
                         newJournal.setCurrentSublistValue({
                             sublistId: 'line',
                             fieldId: 'debit',
                             value: debitAmount.toFixed(2)
                         });
-                    } else {
+                    }
+                    if(creditAmount) {
+
+                        balanceCheckCredit += creditAmount;
                         newJournal.setCurrentSublistValue({
                             sublistId: 'line',
                             fieldId: 'credit',
@@ -313,6 +346,12 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
                 } // end loop
             }
+
+            // check balance in log
+            log.audit({
+               title: 'Balance Check in writeJournalEntry',
+               details: 'Credit = ' + balanceCheckCredit + ', Debit = ' + balanceCheckDebit
+            });
 
             // submit new record
 
@@ -449,7 +488,9 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
         var employeeSearchObj = search.create({
             type: "employee",
             filters: [
-                ["externalid","anyof",uniqueEmployeeIds]
+                ["externalid","anyof",uniqueEmployeeIds],
+                "AND",
+                ["isinactive", "any", ""]
             ],
             columns: [
                 "externalid",
@@ -475,6 +516,7 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
 
         if(logEnable) {
+
             log.debug({
                 title: 'Employee to Department Lookups',
                 details: employeeToDepartmentReferences
@@ -487,13 +529,20 @@ define(['N/file', 'N/record', 'N/render', 'N/search', './Lib/lodash', './Lib/CSO
 
             if(foundRef) {
                 obj.department = foundRef.department_id;
+                //log.audit("foundRef department: " + foundRef.department_id + " for employee: " + foundRef.employee_id);
             }
         });
 
         if(logEnable) {
+            var dataCheckArr = [];
+            data.forEach(function(o) {
+                if(o.department == '209') {
+                    dataCheckArr.push(o);
+                }
+            });
             log.debug({
-                title: 'Data with Department',
-                details: data
+                title: 'Data with Department 209',
+                details: dataCheckArr
             });
         }
 

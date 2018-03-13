@@ -19,19 +19,22 @@ define([], function () {
     };
 
     var currency = {
-        'FR': '4'
+        'FR': '4',
+        'IL': '5'
     };
 
     var subsidiary = {
-        'FR': '11'
+        'FR': '11',
+        'IL': '10'
     }
 
-    var JE_HeaderFields = function(subsidiary, currency) {
+    var JE_HeaderFields = function(subsidiary, currency, location) {
         this.customForm = '106';
         this.subsidiary = subsidiary;
         this.custbodycash_use_category = '6';
         this.currency = currency;
         this.approved = false;
+        this.location = location;
         this.lines = [];
     };
 
