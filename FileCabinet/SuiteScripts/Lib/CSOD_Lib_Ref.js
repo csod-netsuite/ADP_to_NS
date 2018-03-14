@@ -3,7 +3,7 @@ define([], function () {
     /**
      * Reference for Company specific values
      *
-     * @exports XXX
+     * @exports {} exports
      *
      * @copyright 2017 Cornerstone OnDemand
      * @author Chan Yi <cyi@csod.com>
@@ -12,6 +12,8 @@ define([], function () {
      * @NModuleScope SameAccount
      */
     var exports = {};
+    
+    var logEnable = true;
 
     var location = {
         'FR': '14',
@@ -42,5 +44,6 @@ define([], function () {
     exports.currency = currency;
     exports.subsidiary = subsidiary;
     exports.JE_HeaderFields = JE_HeaderFields;
+    exports.logEnable = logEnable;
     return exports;
 });
