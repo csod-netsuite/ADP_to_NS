@@ -3,13 +3,13 @@
  * @NModuleScope SameAccount
  * 
  */
-define(['N/file', './CSOD_Lib_Ref'],
+define(['N/file', 'N/search', './CSOD_Lib_Ref'],
 /**
  * Commonly used functions to parse and process ADP CSV Files
  * @copyright 2017 Cornerstone OnDemand
  * @author Chan Yi <cyi@csod.com>
  */
-function(file, Lib) {
+function(file, search, Lib) {
 	
 	var exports = {};
 	
@@ -53,6 +53,7 @@ function(file, Lib) {
             }
 
             // set tempObj values
+            // we are only interested in lines with Column 1(employee ID) and 5(Paycode)  
             if(!isNaN(parseInt(arr[0])) && !isNaN(parseInt(arr[4]))) {
                 var employeeIdStr = arr[0];
                 // substring for employee id format
