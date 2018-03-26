@@ -65,18 +65,18 @@ define(['N/file', 'N/record', 'N/render', 'N/search',
 
         // TODO open and read Excel File
         var csvFile = file.load({
-            id: 2799072
+            id: 2806120
         });
 
-        var objectifiedData = CommonFunc.getDataObject(csvFile);
+        var dataInObject = CommonFunc.getDataObject(csvFile);
+
         var paycodeAccountObj = CommonFunc.getPaycodeToAccountTable();
 
-        var dataWithAccount = fillAccountId(objectifiedData, paycodeAccountObj);
+        var dataWithAccount = CommonFunc.searchAndFillAccountId(dataInObject, paycodeAccountObj);
 
-        // Get Employee Data with Department
-        var dataWithDepartment = fillDepartmentId(dataWithAccount);
+        var dataWithDepartment = CommonFunc.searchAndFillDepartmentId(dataWithAccount);
 
-        // get unique Debit and Credit Account
+        // get unique Debit Accounts / Credit Accounts / Departments
         var debitAccounts = getUniqueDebitNumbers(dataWithDepartment);
         log.debug({
             title: 'Unique Debits',
@@ -87,20 +87,11 @@ define(['N/file', 'N/record', 'N/render', 'N/search',
             title: 'Unique Credits',
             details: creditAccounts
         });
-
-        // get unique Department
         var departments = getUniqueDepartments(dataWithDepartment);
         log.debug({
             title: 'Unique Departments',
             details: departments
         });
-
-        if(!logEnable) {
-            log.debug({
-                title: 'dataWithAccount',
-                details: dataWithAccount
-            });
-        }
 
         createJournalEntry(dataWithDepartment, debitAccounts, creditAccounts, departments);
     }
@@ -370,27 +361,7 @@ define(['N/file', 'N/record', 'N/render', 'N/search',
 
     };
 
-    /**
-     * Find account ids and set the account id to data object
-     * @param data {array}
-     * @param paycodeObj {array}
-     * @returns {array} data
-     */
-    var fillAccountId = function(data, paycodeObj) {
 
-        for (var i = 0; i < data.length; i++) {
-
-            var matchingObj = paycodeObj.filter(function(obj) {
-                return data[i].paycode == obj.paycode;
-            });
-
-            if(matchingObj.length > 0) {
-                data[i].debit_account = matchingObj[0].debitId;
-                data[i].credit_account = matchingObj[0].creditId;
-            }
-        }
-        return data;
-    };
 
 
     var getUniqueDebitNumbers = function(data) {
@@ -423,93 +394,6 @@ define(['N/file', 'N/record', 'N/render', 'N/search',
         return _.uniq(allDepts);
     };
 
-    /**
-     * Find department for each data in collection
-     * @param data
-     * @returns {collection}data
-     */
-    var fillDepartmentId = function(data) {
-
-        // get all employee ID
-        var allEmployeeIds = [];
-        data.forEach(function(obj) {
-            allEmployeeIds.push(obj.employee_id);
-        });
-
-        var uniqueEmployeeIds = _.uniq(allEmployeeIds);
-
-        log.debug({
-            title: 'Unique Employee IDs',
-            details: uniqueEmployeeIds
-        });
-
-        // search Department Data and build Employee to Department Reference Table
-
-        var employeeToDepartmentReferences = [];
-
-        var employeeSearchObj = search.create({
-            type: "employee",
-            filters: [
-                ["externalid","anyof",uniqueEmployeeIds],
-                "AND",
-                ["isinactive", "any", ""]
-            ],
-            columns: [
-                "externalid",
-                "department"
-            ]
-        });
-
-        var searchResultCount = employeeSearchObj.runPaged().count;
-        if(searchResultCount > 0) {
-            employeeSearchObj.run().each(function(result){
-                // .run().each has a limit of 4,000 results
-                var employeeToDepartmentReference = {
-                    employee_id : '',
-                    department_id : ''
-                };
-
-                employeeToDepartmentReference.employee_id = result.getValue({name: 'externalid'});
-                employeeToDepartmentReference.department_id = result.getValue({name: 'department'});
-                employeeToDepartmentReferences.push(employeeToDepartmentReference);
-                return true;
-            });
-        }
-
-
-        if(logEnable) {
-
-            log.debug({
-                title: 'Employee to Department Lookups',
-                details: employeeToDepartmentReferences
-            });
-        }
-
-        data.forEach(function(obj) {
-
-            var foundRef = _.find(employeeToDepartmentReferences, {'employee_id': obj.employee_id});
-
-            if(foundRef) {
-                obj.department = foundRef.department_id;
-                //log.audit("foundRef department: " + foundRef.department_id + " for employee: " + foundRef.employee_id);
-            }
-        });
-
-        if(logEnable) {
-            var dataCheckArr = [];
-            data.forEach(function(o) {
-                if(o.department == '209') {
-                    dataCheckArr.push(o);
-                }
-            });
-            log.debug({
-                title: 'Data with Department 209',
-                details: dataCheckArr
-            });
-        }
-
-        return data;
-    };
 
 
 
