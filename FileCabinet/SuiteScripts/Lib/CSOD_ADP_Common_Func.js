@@ -3,13 +3,13 @@
  * @NModuleScope SameAccount
  * 
  */
-define(['N/file', 'N/search', 'N/record','./CSOD_ADP_Lib_Ref', './lodash'],
+define(['N/file', 'N/search', 'N/record', 'N/error', './CSOD_ADP_Lib_Ref', './lodash'],
 /**
  * Commonly used functions to parse and process ADP CSV Files
  * @copyright 2017 Cornerstone OnDemand
  * @author Chan Yi <cyi@csod.com>
  */
-function(file, search, record, Lib, lodash) {
+function(file, search, record, error, Lib, lodash) {
 
     var logEnable = Lib.logEnable;
 
@@ -92,7 +92,7 @@ function(file, search, record, Lib, lodash) {
             }
         }
 
-        log.debug({
+        log.audit({
             title: "PAYCODES_NOT_FOUND",
             details: PAYCODES_NOT_FOUND
         });
@@ -108,6 +108,24 @@ function(file, search, record, Lib, lodash) {
     var searchAndFillDepartmentId = function(data) {
 
         // get all employee ID
+    	
+    	log.debug('searchAndFillDepartmentId data length = ' +  data.length)
+    	
+    	if(data.length === 0) {
+    		var errorObj = error.create({
+    		    name: 'ERROR_EMPLOYEE_ID',
+    		    message: 'Please check your CSV file.',
+    		    notifyOff: true
+    		});
+    		
+    		log.error({
+    			title: errorObj.name + ' : function searchAndFillDepartmentId()',
+    			details: errorObj.message	
+    		});
+    		
+    		throw errorObj;
+    	}
+    	
         var allEmployeeIds = [];
         data.forEach(function(obj) {
             allEmployeeIds.push(obj.employee_id);

@@ -80,6 +80,9 @@ define(['./CSOD_Lib_Ref', './CSOD_ADP_Common_Func'], function (LIB, COMMOM_FUNC)
             title: 'jeObj check',
             details: jeObj.lines.slice(jeObj.lines.length - 10, jeObj.lines.length)
         });
+        
+        return jeObj;
+        
     };
 
     exports.createIsraelJournal = createIsraelJournal;
