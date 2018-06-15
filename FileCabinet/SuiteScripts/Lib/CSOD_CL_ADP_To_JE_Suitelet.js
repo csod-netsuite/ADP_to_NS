@@ -166,7 +166,7 @@ function(https, swal) {
     		swal({
     			title: "Please select a file to upload",
     			icon: "error",
-    			button: "Si..."
+    			button: "Ok."
     		});
     		
     		return false;
@@ -178,7 +178,8 @@ function(https, swal) {
     	if(actionValue == '2' || actionValue == '1') {
     		swal("Your request is being processed ... ", {
     			icon: "info",
-    			button: false
+    			button: false,
+    			closeOnClickOutside: false
     		});
 
     	}

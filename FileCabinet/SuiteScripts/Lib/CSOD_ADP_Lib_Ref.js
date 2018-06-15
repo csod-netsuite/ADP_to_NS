@@ -21,21 +21,33 @@ define([], function () {
         'FR': '14',
         'IL': '15',
         'BE': '17',
-        'NL': '19'
+        'NL': '19',
+        'AT': '16',
+        'NO': '30',
+        'ES': '27',
+        'CH': '20'
     };
 
     var currency = {
         'FR': '4',
         'IL': '5',
         'BE': '4',
-        'NL': '4'
+        'NL': '4',
+        'AT': '4',
+        'NO': '17',
+        'ES': '4',
+        'CH': '15'
     };
 
     var subsidiary = {
         'FR': '11',
         'IL': '10',
         'BE': '56',
-        'NL': '45'
+        'NL': '45',
+        'AT': '58',
+        'NO': '57',
+        'ES': '8',
+        'CH': '47'
     }
 
     var JE_HeaderFields = function(subsidiary, currency, location) {
