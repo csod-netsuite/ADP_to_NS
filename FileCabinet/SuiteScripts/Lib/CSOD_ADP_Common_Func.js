@@ -1,6 +1,6 @@
 /**
  * @NApiVersion 2.x
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  * 
  */
 define(['N/file', 'N/search', 'N/record', 'N/error', './CSOD_ADP_Lib_Ref', './lodash'],
@@ -19,19 +19,50 @@ function(file, search, record, error, Lib, lodash) {
      * Search customrecord_csod_adp_paycode_table and build list of data in object
      * return {array}
      */
-    var getPaycodeToAccountTable = function() {
+    var getPaycodeToAccountTable = function(countryCode) {
+    	
+    	log.debug("countryCode in getPaycodeToAccountTable", countryCode);
+    	
+    	/**
+    	 * IMPORTANTE!!  
+    	 * UPDATE THESE LISTS AFTER NEW COUNTRY HAS BEEN ADDED BY ADMIN
+    	 */
+    	
+    	const COUNTRYCODE_MAP = {
+    		FR: 1,
+    		IL: 2,
+    		BE: 3,
+    		NL: 4,
+    		ES: 5,
+    		CH: 6,
+    		NO: 7,
+    		AT: 8,
+    		HK: 9,
+    		SG: 10,
+    		PL: 11,
+    		AU: 12,
+    		FIN: 13,
+    		DE: 14,
+    		IT: 15,
+    		NZ: 16,
+    		SE: 17,
+    		UK: 18,
+    		DK: 19,
+    		IN: 20,
+    		JP: 21
+    	}
 
         var outList = [];
 
         var customrecord_csod_adp_paycode_tableSearchObj = search.create({
             type: "customrecord_csod_adp_paycode_table",
-            filters:[],
-        columns: [
-            "custrecord_csod_adp_paycode",
-            "custrecord_csod_adp_cr_gl_account",
-            "custrecord_csod_adp_dr_gl_account"
-        ]
-    });
+            filters:["custrecord_csod_adp_ctry_code","anyof",COUNTRYCODE_MAP[countryCode]],
+	        columns: [
+	            "custrecord_csod_adp_paycode",
+	            "custrecord_csod_adp_cr_gl_account",
+	            "custrecord_csod_adp_dr_gl_account"
+	        ]
+        });
         var searchResultCount = customrecord_csod_adp_paycode_tableSearchObj.runPaged().count;
         if(searchResultCount > 0) {
             customrecord_csod_adp_paycode_tableSearchObj.run().each(function(result){
@@ -65,6 +96,9 @@ function(file, search, record, error, Lib, lodash) {
      * @returns {array} data
      */
     var searchAndFillAccountId = function(data, paycodeObj) {
+    	
+    	log.debug("searchAndFillAccountId data", data);
+    	
         var paycodes = lodash.map(paycodeObj, 'paycode');
 
         log.debug({
@@ -126,6 +160,8 @@ function(file, search, record, error, Lib, lodash) {
     		throw errorObj;
     	}
     	
+    	var allLiabilityAccounts = getAllLiabilityAccounts();
+    	
         var allEmployeeIds = [];
         data.forEach(function(obj) {
             allEmployeeIds.push(obj.employee_id);
@@ -181,18 +217,22 @@ function(file, search, record, error, Lib, lodash) {
         }
 
         data.forEach(function(obj) {
+        	
+        	if(allLiabilityAccounts.indexOf(obj.debit_account) > -1) {
+        		obj.department = '12';
+        	} else {
+                var foundRef = lodash.find(employeeToDepartmentReferences, {'employee_id': obj.employee_id});
 
-            var foundRef = lodash.find(employeeToDepartmentReferences, {'employee_id': obj.employee_id});
+                if(foundRef) {
+                    obj.department = foundRef.department_id;
+                    //log.audit("foundRef department: " + foundRef.department_id + " for employee: " + foundRef.employee_id);
+                }
+        	}
 
-            if(foundRef) {
-                obj.department = foundRef.department_id;
-                //log.audit("foundRef department: " + foundRef.department_id + " for employee: " + foundRef.employee_id);
-            }
-
-             log.audit({
-                 title: 'each data value check',
-                 details: obj
-             });
+	         log.audit({
+	             title: 'each data value check',
+	             details: obj
+	         });
         });
 
         return data;
@@ -353,6 +393,45 @@ function(file, search, record, error, Lib, lodash) {
         }
 
     };
+    
+    
+    
+    /**
+     * UTILS
+     */
+    
+    function getAllLiabilityAccounts() {
+    	
+    	var libAccts = ['280', '281', '466', '489', '1515', '1604'];
+    	
+    	/* Default to Cristina's email for now 8/13/2018
+    	 
+    	var accountSearchObj = search.create({
+    		   type: "account",
+    		   filters:
+    		   [
+    		      ["type","anyof","AcctPay","OthCurrLiab","LongTermLiab"], 
+    		      "AND", 
+    		      ["number","isnotempty",""]
+    		   ],
+    		   columns:
+    		   [
+    		      search.createColumn({name: "number", label: "Number"}),
+    		      search.createColumn({name: "name", label: "Name"})
+    		   ]
+    		});
+    		var searchResultCount = accountSearchObj.runPaged().count;
+    		log.debug("accountSearchObj result count",searchResultCount);
+    		accountSearchObj.run().each(function(result){
+    		   // .run().each has a limit of 4,000 results
+    			libAccts.push(result.id);
+    			return true;
+    		});
+    		
+    		*/
+    	
+    	return libAccts;
+    }
 
     exports.writeJournalEntry = writeJournalEntry;
     exports.getPaycodeToAccountTable = getPaycodeToAccountTable;

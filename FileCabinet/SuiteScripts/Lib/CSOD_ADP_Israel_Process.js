@@ -1,13 +1,11 @@
+/**
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ */
+
 define(['./CSOD_Lib_Ref', './CSOD_ADP_Common_Func'], function (LIB, COMMOM_FUNC) {
 
-    /**
-     * Israel Specific Script for creating Journal Entries
-     *
-     * @exports XXX
-     *
-     * @NApiVersion 2.x
-     * @NModuleScope SameAccount
-     */
+
     var exports = {};
 
     var DEBIT_EXCEPTIONS = ['1604', '489'];

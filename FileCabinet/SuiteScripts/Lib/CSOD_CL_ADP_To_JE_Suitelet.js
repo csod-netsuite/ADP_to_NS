@@ -1,12 +1,9 @@
 /**
  * @NApiVersion 2.x
  * @NScriptType ClientScript
- * @NModuleScope SameAccount
+ * @NModuleScope Public
  */
 define(['N/https', './sweetalert.min.js'],
-/**
- * @param {https} https
- */
 function(https, swal) {
     
     /**

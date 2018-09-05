@@ -4,14 +4,14 @@
  * @NModuleScope SameAccount
  */
 define(['N/redirect', 'N/file', 'N/task', 'N/ui/serverWidget', 'N/record', 'N/render', 'N/search', 
-        './Lib/lodash', './Lib/CSOD_ADP_Lib_Ref', './Lib/CSOD_ADP_Common_Func',
-        './Lib/CSOD_ADP_Israel_Process'],
+        './Lib/lodash', './Lib/CSOD_ADP_Lib_Ref', './Lib/CSOD_ADP_Common_Func'/*,
+        './Lib/CSOD_ADP_Israel_Process'*/],
 /**
  * @param {file} file
  * @param {task} task
  * @param {ui} ui
  */
-function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, IL) {
+function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC/*, IL*/) {
    
     /**
      * Definition of the Suitelet script trigger point.
@@ -31,7 +31,9 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
     // Accrued ESPP Withholdings ID (negative debit)
     const ACC_ESPP_WITHHOLDING = '1604';
     
-    const SUITELET_ID = '1099';
+    const SUITELET_ID = '2005';
+    
+    const FOLDER_ID = '2738762';
 
     // global value initialization
 
@@ -242,7 +244,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
     		
     		if(csvFileObj) {
     			
-        		csvFileObj.folder = 2375826;
+        		csvFileObj.folder = FOLDER_ID;
         		var fileId = csvFileObj.save();
         		log.debug({
         			title: 'fileId',
@@ -332,7 +334,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
 
         var dataInObject = getDataObject(csvFile);
 
-        var paycodeAccountObj = COMMON_FUNC.getPaycodeToAccountTable();
+        var paycodeAccountObj = COMMON_FUNC.getPaycodeToAccountTable(GLOBAL_COUNTRY_SPECIFIC.countryCode);
 
         var dataWithAccount = COMMON_FUNC.searchAndFillAccountId(dataInObject, paycodeAccountObj);
 
@@ -413,8 +415,25 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
                 credit_account: "",
                 amount: 0
             };
+            
+            var dataArr = line.value.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            
+            log.debug("dataArr check", dataArr);
+            
+            for(var i = 0; i < dataArr.length; i++) {
+            	if(dataArr[i]) {
+            		dataArr[i] = dataArr[i].replace(/"|,/g, '');
+            		if(i == 6) {
+            			log.debug("new test value check", dataArr[i]);
+                    	log.debug("can I parse it?", parseFloat(dataArr[i]));
+            		}
+                	
+                }
+            }
+            
+            log.debug("dataArr check after manipulation", dataArr);
 
-            var arr = line.value.split(',');
+            var arr = dataArr;
 
             // get contrycode
             if(arr[0].toLowerCase() == 'country code') {
@@ -439,7 +458,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
                 });
             }
 
-            if(!isNaN(parseInt(arr[0])) && !isNaN(parseInt(arr[4]))) {
+            if(!isNaN(parseInt(arr[0])) && arr[4]) {
                 var employeeIdStr = arr[0];
 
 
@@ -453,7 +472,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
 
             }
 
-            if(LIB.logEnable && employeeIdStr == '105097') {
+            if(LIB.logEnable) {
                 log.debug({
                     title: "tempObj",
                     details: tempObj
@@ -596,6 +615,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC, 
                     jeObj.lines.push(creditLineObj);
                 } else if(creditLineObj.credit < 0) {
                     // convert to positive
+                	// TODO flip to credit - this is testing for 8/21/2018
                     creditLineObj.credit = -creditLineObj.credit;
                     jeObj.lines.push(creditLineObj);
                 }

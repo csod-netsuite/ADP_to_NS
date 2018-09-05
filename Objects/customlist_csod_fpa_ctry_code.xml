@@ -12,5 +12,33 @@
       <isinactive>F</isinactive>
       <value>IL</value>
     </customvalue>
+    <customvalue scriptid="val_28056834_642845_sb2_350">
+      <isinactive>F</isinactive>
+      <value>BE</value>
+    </customvalue>
+    <customvalue scriptid="val_28058908_642845_sb2_310">
+      <isinactive>F</isinactive>
+      <value>NL</value>
+    </customvalue>
+    <customvalue scriptid="val_28117962_642845_sb2_822">
+      <isinactive>F</isinactive>
+      <value>ES</value>
+    </customvalue>
+    <customvalue scriptid="val_28117963_642845_sb2_763">
+      <isinactive>F</isinactive>
+      <value>CH</value>
+    </customvalue>
+    <customvalue scriptid="val_28117964_642845_sb2_798">
+      <isinactive>F</isinactive>
+      <value>NO</value>
+    </customvalue>
+    <customvalue scriptid="val_28117965_642845_sb2_516">
+      <isinactive>F</isinactive>
+      <value>AT</value>
+    </customvalue>
+    <customvalue scriptid="val_28118310_642845_sb2_915">
+      <isinactive>F</isinactive>
+      <value>HK</value>
+    </customvalue>
   </customvalues>
 </customlist>

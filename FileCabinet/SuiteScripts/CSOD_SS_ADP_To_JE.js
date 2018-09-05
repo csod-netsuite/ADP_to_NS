@@ -1,20 +1,22 @@
+/**
+ * @NApiVersion 2.x
+ * @NModuleScope SameAccount
+ * @NScriptType ScheduledScript
+ */
 
 define(['N/runtime', 'N/file', 'N/record', 'N/render', 'N/search', 
         './Lib/lodash', './Lib/CSOD_ADP_Lib_Ref', './Lib/CSOD_ADP_Common_Func',
         './Lib/CSOD_ADP_Israel_Process'],
     function (runtime, file, record, render, search, _, LIB, COMMON_FUNC, IL) {
-
-    /**
-     * Module Description...
-     *
-     * @copyright 2017 Cornerstone OnDemand
-     * @author Chan Yi  cyi@csod.com
-     *
-     * @NApiVersion 2.x
-     * @NModuleScope Public
-     * @NScriptType ScheduledScript
-     */
-
+	
+	/*
+	 * Module Description...
+	 *
+ 	 * @copyright 2017 Cornerstone OnDemand
+ 	 * @author Chan Yi  cyi@csod.com
+ 	 *
+	 */
+	
     /**
      * Create Object like this for every line (SVE)
      * {

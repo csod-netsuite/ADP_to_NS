@@ -1,4 +1,10 @@
-define([], function () {
+/**
+ * CSOD_ADP_Lib_Ref.js
+ * @NApiVersion 2.x
+ * @NModuleScope Public
+ */
+
+define(['N/record'], function (record) {
 
     /**
      * Reference for Company specific values
@@ -8,14 +14,18 @@ define([], function () {
      * @copyright 2017 Cornerstone OnDemand
      * @author Chan Yi <cyi@csod.com>
      *
-     * @NApiVersion 2.x
-     * @NModuleScope SameAccount
      */
     var exports = {};
     
     var logEnable = true;
 
     const EXCLUDED_PAYCODE = ['5017', '5019'];
+    
+    /**
+     * IMPORTANTE!!
+     * UPDATE THESE LISTS AFTER ADMIN ADDS COUNTRY CODE TO 
+     * CSOD ADP COUNTRY CODE
+     */
 
     var location = {
         'FR': '14',
@@ -25,7 +35,16 @@ define([], function () {
         'AT': '16',
         'NO': '30',
         'ES': '27',
-        'CH': '20'
+        'CH': '20',
+        'HK': '43',
+        'SG': '42',
+        'PL': '40',
+        'AU': '11',
+        'NZ': '34',
+        'IN': '9',
+        'DE': '10',
+        'SE': '23',
+        'FIN': '35'
     };
 
     var currency = {
@@ -36,7 +55,16 @@ define([], function () {
         'AT': '4',
         'NO': '17',
         'ES': '4',
-        'CH': '15'
+        'CH': '15',
+        'HK': '16',
+        'SG': '9',
+        'PL': '22',
+        'AU': '7',
+        'NZ': '12',
+        'IN': '6',
+        'DE': '4',
+        'SE': '10',
+        'FIN': '4'
     };
 
     var subsidiary = {
@@ -47,7 +75,16 @@ define([], function () {
         'AT': '58',
         'NO': '57',
         'ES': '8',
-        'CH': '47'
+        'CH': '47',
+        'HK': '41',
+        'SG': '60',
+        'PL': '49',
+        'AU': '32',
+        'NZ': '18',
+        'IN': '7',
+        'DE': '12',
+        'SE': '46',
+        'FIN': '59'
     }
 
     var JE_HeaderFields = function(subsidiary, currency, location) {

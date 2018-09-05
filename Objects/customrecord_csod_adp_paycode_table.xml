@@ -70,7 +70,7 @@
       <searchcomparefield></searchcomparefield>
       <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
-      <selectrecordtype>[customlist_csod_fpa_ctry_code]</selectrecordtype>
+      <selectrecordtype>[scriptid=customlist_csod_fpa_ctry_code]</selectrecordtype>
       <showinlist>F</showinlist>
       <sourcefilterby></sourcefilterby>
       <sourcefrom></sourcefrom>
