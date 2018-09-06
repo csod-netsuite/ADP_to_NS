@@ -375,7 +375,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC/*
             case 'FR':
                 // FRANCE
                 log.debug('Processing France');
-                output = createJournalEntry(dataWithDepartment, debitAccounts, creditAccounts, departments, GLOBAL_COUNTRY_SPECIFIC);
+                output = createJournalEntryObject(dataWithDepartment, debitAccounts, creditAccounts, departments, GLOBAL_COUNTRY_SPECIFIC);
                 break;
 
             case 'IL':
@@ -385,7 +385,7 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC/*
                 break;
 
             default:
-            	output = createJournalEntry(dataWithDepartment, debitAccounts, creditAccounts, departments, GLOBAL_COUNTRY_SPECIFIC);
+            	output = createJournalEntryObject(dataWithDepartment, debitAccounts, creditAccounts, departments, GLOBAL_COUNTRY_SPECIFIC);
                 break;
 
         }
@@ -416,6 +416,8 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC/*
                 amount: 0
             };
             
+            // IMPORTANTE
+            // This regex is used to ignore comma in CSV cells
             var dataArr = line.value.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             
             log.debug("dataArr check", dataArr);
@@ -488,8 +490,10 @@ function(redirect, file, task, ui, record, render, search, _, LIB, COMMON_FUNC/*
         return output;
     };
 
-
-    var createJournalEntry = function(data, debitAccts, creditAccts, depts, global_obj) {
+    /**
+     * Creates object that appends to Suitelet
+     */
+    var createJournalEntryObject = function(data, debitAccts, creditAccts, depts, global_obj) {
 
         // Get Header Level Obj
 

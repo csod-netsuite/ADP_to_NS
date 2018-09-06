@@ -135,7 +135,7 @@ function(file, search, record, error, Lib, lodash) {
     };
 
     /**
-     * Find department for each data in collection
+     * Find department for each data in collection array
      * @param data {object}
      * @returns {collection}data
      */
@@ -237,40 +237,11 @@ function(file, search, record, error, Lib, lodash) {
 
         return data;
     };
-
-
-    var getUniqueDebitNumbers = function(data, specialDebit) {
-        var allDebitAccts = [];
-        data.forEach(function(o) {
-            allDebitAccts.push(o.debit_account);
-        });
-
-        if(specialDebit) allDebitAccts.push(specialDebit);
-
-        return lodash.uniq(allDebitAccts);
-    };
-
-    var getUniqueCreditNumbers = function(data, specialCredit) {
-        var allCreditAccts = [];
-        data.forEach(function(o){
-            allCreditAccts.push(o.credit_account);
-        });
-
-        // Manually Adding Account 21395 (ACC_ESPP_WITHHOLDING)
-        if(specialCredit) allCreditAccts.push(specialCredit);
-
-        return lodash.uniq(allCreditAccts);
-    };
-
-    var getUniqueDepartments = function(data) {
-        var allDepts = [];
-        data.forEach(function(o){
-            allDepts.push(o.department);
-        });
-
-        return lodash.uniq(allDepts);
-    };
-
+    
+    
+    
+    // Create Journal Entry Record
+    
     var writeJournalEntry = function(jeObj) {
 
         try {
@@ -400,6 +371,9 @@ function(file, search, record, error, Lib, lodash) {
      * UTILS
      */
     
+    // IMPORTANT!
+    // CONSULT WITH CRISTINA!
+    //@ TODO : This might be affecting data conversion error for Germany and Netherlands
     function getAllLiabilityAccounts() {
     	
     	var libAccts = ['280', '281', '466', '489', '1515', '1604'];
@@ -432,7 +406,48 @@ function(file, search, record, error, Lib, lodash) {
     	
     	return libAccts;
     }
+    
+    
+    /**
+     * Converting data to have unique value in collection
+     */
 
+    var getUniqueDebitNumbers = function(data, specialDebit) {
+        var allDebitAccts = [];
+        data.forEach(function(o) {
+            allDebitAccts.push(o.debit_account);
+        });
+
+        if(specialDebit) allDebitAccts.push(specialDebit);
+
+        return lodash.uniq(allDebitAccts);
+    };
+
+    var getUniqueCreditNumbers = function(data, specialCredit) {
+        var allCreditAccts = [];
+        data.forEach(function(o){
+            allCreditAccts.push(o.credit_account);
+        });
+
+        // Manually Adding Account 21395 (ACC_ESPP_WITHHOLDING)
+        if(specialCredit) allCreditAccts.push(specialCredit);
+
+        return lodash.uniq(allCreditAccts);
+    };
+
+    var getUniqueDepartments = function(data) {
+        var allDepts = [];
+        data.forEach(function(o){
+            allDepts.push(o.department);
+        });
+
+        return lodash.uniq(allDepts);
+    };
+    
+    
+    
+    
+    // Expose functions and make them available 
     exports.writeJournalEntry = writeJournalEntry;
     exports.getPaycodeToAccountTable = getPaycodeToAccountTable;
     exports.searchAndFillAccountId = searchAndFillAccountId;
